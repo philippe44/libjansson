@@ -48,5 +48,11 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
+#msic VS
+*.vs/
+
 # misc editor file
 *.bak
+*.user
+Debug/
+Win32/

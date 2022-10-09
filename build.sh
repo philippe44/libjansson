@@ -7,6 +7,11 @@ declare -a compilers
 
 IFS= read -ra candidates <<< "$list"
 
+# do we have "clean" somewhere in parameters (assuming no compiler has "clean" in it...
+if [[ $@[*]} =~ clean ]]; then
+	clean="clean"
+fi	
+
 # first select platforms/compilers
 for cc in ${candidates[@]}
 do
@@ -15,7 +20,7 @@ do
 		continue
 	fi
 	
-	if [[ $# == 0 ]]; then
+	if [[ $# == 0 || ($# == 1 && -n $clean) ]]; then
 		compilers+=($cc)
 		continue
 	fi
@@ -28,21 +33,44 @@ do
 	done
 done
 
+item=jansson
+library=lib$item.a
+pwd=$(pwd)
+
+# bootstrap environment if needed
+if [[ ! -f $item/configure && -f $item/configure.ac ]]; then
+	cd $item
+	if [[ -f autogen.sh ]]; then
+		./autogen.sh --no-symlinks
+	else 	
+		autoreconf -if
+	fi	
+	cd $pwd
+fi	
+
 # then iterate selected platforms/compilers
 for cc in ${compilers[@]}
 do
 	IFS=- read -r platform host dummy <<< $cc
+
+	target=targets/$host/$platform
 	
-	cd jansson
+	if [ -f $target/$library ] && [[ -z $clean ]]; then
+		continue
+	fi
+	
 	export CPPFLAGS=${cppflags[$cc]}
 	export CC=${alias[$cc]:-$cc} 
 	export CXX=${CC/gcc/g++}
+	
+	cd $item
 	./configure --enable-static --disable-shared --host=$platform-$host 
 	make clean && make
-		
-	mkdir -p ../targets/$host/$platform
-	cp src/.libs/lib*.a $_
-	mkdir -p ../targets/$host/$platform/include
-	cp src/jansson.h $_
-	cp src/jansson_config.h $_
+	cd $pwd
+
+	mkdir -p $target		
+	cp -u $item/src/.libs/$library $_
+	mkdir -p $_/include
+	cp -u $item/src/$item.h $_
+	cp -u $item/src/"$item"_config.h $_
 done
