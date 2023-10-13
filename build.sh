@@ -94,6 +94,8 @@ do
 	# don't let clang create temp files
 	if [[ $CC =~ -cc ]]; then
 		CFLAGS+="-fno-temp-file"
+	else 
+		CFLAGS+=" -fPIC"		
 	fi		
 	
 	cd $item
